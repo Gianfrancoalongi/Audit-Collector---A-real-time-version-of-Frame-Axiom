@@ -1,0 +1,12 @@
+{application, audit_erl,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { audit_erl_app, []}},
+  {env, []}
+ ]}.
