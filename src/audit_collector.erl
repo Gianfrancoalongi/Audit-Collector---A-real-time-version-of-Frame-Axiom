@@ -47,19 +47,15 @@ handle_call({add_tracing_on,{process,Options}},_,State) ->
     erlang:trace(new,true,Flags), 
     {reply,ok,State};
 handle_call({review,{process,Options}},_,State) ->
-    OPFlags = option_to_flag(Options),
-    io:format(user,"Audit Collector :: review, {process,OPFlags} ---> ~p~n",[OPFlags]),
-    io:format(user,"Audit Collector :: State log ---> ~p~n",[State#state.log]),
-    Reply = make_log(OPFlags,lists:reverse(State#state.log)),
-    io:format(user,"Reply == ~p~n",[Reply]),
+    OPFlags = option_to_flag(Options),    
+    Reply = make_log(OPFlags,lists:reverse(State#state.log)),    
     {reply,Reply,State}.
 
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info(X, State) ->
-    io:format(user,"Audit Collector :: handle_info/2 -> ~p~n",[X]),
+handle_info(X, State) ->   
     {noreply, State#state{log = [X|State#state.log]}}.
 
 terminate(_Reason, _State) ->
@@ -78,7 +74,6 @@ make_log([],_) -> [];
 make_log([send|R],History) ->
     lists:foldl(
       fun({trace_ts,P,send,Msg,To,_},Acc) when is_pid(P)->
-io:format(user,"Foldl SEND ~p~n",[{trace_ts,P,send,Msg,To}]),
 	      case Msg of
 		  {io_request,P,To,_} -> 
 		      Acc;
@@ -90,7 +85,6 @@ io:format(user,"Foldl SEND ~p~n",[{trace_ts,P,send,Msg,To}]),
 make_log(['receive'|R],History) ->
     lists:foldl(
       fun({trace_ts,P,'receive',Msg,_},Acc) ->
-io:format(user,"Foldl RECEIVE ~p~n",[{trace_ts,P,'receive',Msg}]),
 	      case Msg of
 		  {io_reply,P2,_} when is_pid(P2)-> 
 		      Acc;
@@ -99,4 +93,3 @@ io:format(user,"Foldl RECEIVE ~p~n",[{trace_ts,P,'receive',Msg}]),
 		 end;
 	 (_,Acc) -> Acc		       
 	 end,[],History)++make_log(R,History).
-

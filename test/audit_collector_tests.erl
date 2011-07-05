@@ -4,7 +4,7 @@
 audit_collector_test_() ->
     {foreach,
      fun() -> audit_collector:start_link() end,
-     fun(P) -> audit_collector:stop() end,
+     fun(_) -> audit_collector:stop() end,
      [fun audit_collector_process/0
      ]}.
 
@@ -15,7 +15,8 @@ audit_collector_process() ->
     Receiver = spawn_link(fun() -> receive die -> ok end end),
     receive {i_sent_this,Sender} -> ok end,
     Receiver ! die,
+    timer:sleep(10),
     ?assertMatch(
-       [{send,Sender,{i_sent_this,Sent}},
+       [{send,Sender,{i_sent_this,Sender}},
 	{'receive',Receiver,die}],
        audit_collector:review(process,[send,'receive'])).
