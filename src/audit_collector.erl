@@ -24,11 +24,11 @@ start_link() ->
 stop() ->
     gen_server:call(?MODULE,stop).
 
--spec(audit(process,[send|'receive']) -> ok).	     
+-spec(audit(process,[send|'receive'|start]) -> ok).	     
 audit(process,Options) ->
     gen_server:call(?MODULE,{add_tracing_on,{process,Options}}).
 
--spec(review(process,[send|'receive']) -> [tuple()]).
+-spec(review(process,[send|'receive'|start]) -> [tuple()]).
 review(process,Options) ->	     
     gen_server:call(?MODULE,{review,{process,Options}}).
 
@@ -42,13 +42,12 @@ init([]) ->
 handle_call(stop,_, State) ->
     {stop,normal,ok,State};
 handle_call({add_tracing_on,{process,Options}},_,State) ->
-    OPFlags = option_to_flag(Options),
+    OPFlags = options_to_trace_flag(Options),
     Flags = [timestamp,{tracer,self()}|OPFlags],
     erlang:trace(new,true,Flags), 
     {reply,ok,State};
 handle_call({review,{process,Options}},_,State) ->
-    OPFlags = option_to_flag(Options),    
-    Reply = make_log(OPFlags,lists:reverse(State#state.log)),    
+    Reply = make_log(Options,lists:reverse(State#state.log)),    
     {reply,Reply,State}.
 
 
@@ -67,8 +66,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-option_to_flag(X) ->
-    X.
+options_to_trace_flag([start|R]) ->
+    [procs,set_on_spawn|options_to_trace_flag(R)];
+options_to_trace_flag([X|R]) -> 
+    [X|options_to_trace_flag(R)];
+options_to_trace_flag([]) -> [].
 
 make_log([],_) -> [];
 make_log([send|R],History) ->
@@ -92,4 +94,10 @@ make_log(['receive'|R],History) ->
 		      Acc++[{'receive',P,Msg}]
 		 end;
 	 (_,Acc) -> Acc		       
-	 end,[],History)++make_log(R,History).
+      end,[],History)++make_log(R,History);
+make_log([start|R],History) ->
+    lists:foldl(
+      fun({trace_ts,P,spawn,P2,{_M,_F,_A},_},Acc) ->
+	      Acc++[{started,P,P2}];
+	 (_,Acc) -> Acc
+      end,[],History)++make_log(R,History).
