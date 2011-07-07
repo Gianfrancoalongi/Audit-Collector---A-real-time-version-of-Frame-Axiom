@@ -8,7 +8,8 @@ audit_collector_test_() ->
      [
       fun audit_collector_process_send/0,
       fun audit_collector_process_receive/0,
-      fun audit_collector_process_started/0
+      fun audit_collector_process_started/0,
+      fun audit_collector_process_exited/0
      ]}.
 
 audit_collector_process_send() ->
@@ -41,3 +42,15 @@ audit_collector_process_started() ->
        [{started,Started,Startee}],
        audit_collector:review(process,[start])).
     
+audit_collector_process_exited() ->
+    process_flag(trap_exit,true),
+    audit_collector:audit(process,[exit]),
+    Started = spawn_link(fun() -> hello end),
+    receive 
+	{'EXIT',Started,normal} ->
+	    ok
+    end,
+    timer:sleep(10),
+    ?assertMatch(
+       [{exited,Started,normal}],
+       audit_collector:review(process,[exit])).

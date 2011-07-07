@@ -54,7 +54,7 @@ handle_call({review,{process,Options}},_,State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info(X, State) ->   
+handle_info(X, State) ->
     {noreply, State#state{log = [X|State#state.log]}}.
 
 terminate(_Reason, _State) ->
@@ -67,6 +67,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 options_to_trace_flag([start|R]) ->
+    [procs,set_on_spawn|options_to_trace_flag(R)];
+options_to_trace_flag([exit|R]) ->
     [procs,set_on_spawn|options_to_trace_flag(R)];
 options_to_trace_flag([X|R]) -> 
     [X|options_to_trace_flag(R)];
@@ -100,4 +102,12 @@ make_log([start|R],History) ->
       fun({trace_ts,P,spawn,P2,{_M,_F,_A},_},Acc) ->
 	      Acc++[{started,P,P2}];
 	 (_,Acc) -> Acc
+      end,[],History)++make_log(R,History);
+make_log([exit|R],History) ->
+    lists:foldl(
+      fun({trace_ts,P,exit,C,_},Acc) ->
+	      Acc++[{exited,P,C}];
+	 (_,Acc) ->
+	      Acc
       end,[],History)++make_log(R,History).
+
