@@ -9,7 +9,8 @@ audit_collector_test_() ->
       fun audit_collector_process_send/0,
       fun audit_collector_process_receive/0,
       fun audit_collector_process_started/0,
-      fun audit_collector_process_exited/0
+      fun audit_collector_process_exited/0,
+      fun audit_collector_process_exited_deep/0
      ]}.
 
 audit_collector_process_send() ->
@@ -54,3 +55,23 @@ audit_collector_process_exited() ->
     ?assertMatch(
        [{exited,Started,normal}],
        audit_collector:review(process,[exit])).
+
+audit_collector_process_exited_deep() ->
+    process_flag(trap_exit,true),
+    audit_collector:audit(process,[exit]),
+    Self = self(),
+    Main = spawn_link(fun() -> 
+			      process_flag(trap_exit,true),
+			      Alt = spawn_link(lists,reverse,[[1]]),
+			      receive X -> Self ! X
+			      end
+		      end),
+    {'EXIT',P2,normal} = (fun() -> receive X -> X end end)(),
+    {'EXIT',Main,normal} = (fun() -> receive X -> X end end)(),
+    timer:sleep(10),
+    ?assertMatch(
+       [{exited,P2,normal},
+	{exited,Main,normal}
+       ],
+       audit_collector:review(process,[exit])).
+
