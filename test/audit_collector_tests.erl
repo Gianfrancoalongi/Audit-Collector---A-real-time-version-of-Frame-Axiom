@@ -14,7 +14,8 @@ audit_collector_test_() ->
       {"Named Process Send",fun audit_collector_process_named_send/0},
       {"Named Process Receive",fun audit_collector_process_named_receive/0},
       {"Named Process Starts Process",fun audit_collector_process_named_started/0},
-      {"Named Process Starts Named",fun audit_collector_process_named_started_named/0}
+      {"Named Process Starts Named",fun audit_collector_process_named_started_named/0},
+      {"Named Process Exited",fun audit_collector_process_named_exited/0}
      ]}.
 
 audit_collector_process_send() ->
@@ -141,4 +142,15 @@ audit_collector_process_named_started_named() ->
     ?assertMatch(
        [{started,iName,iStarted}],
        audit_collector:review(process,[named_start])).
-   
+
+
+audit_collector_process_named_exited() ->
+    process_flag(trap_exit,true),
+    audit_collector:audit(process,[named_exit]),
+    Started = spawn_link(fun() -> register(iName,self()) end),
+    receive {'EXIT',Started,normal} -> ok end,
+    timer:sleep(10),
+    ?assertMatch(
+       [{exited,iName,normal}],
+       audit_collector:review(process,[named_exit])).
+
