@@ -11,7 +11,8 @@ audit_collector_test_() ->
       fun audit_collector_process_started/0,
       fun audit_collector_process_exited/0,
       fun audit_collector_process_exited_deep/0,
-      fun audit_collector_process_named_send/0
+      fun audit_collector_process_named_send/0,
+      fun audit_collector_process_named_receive/0
      ]}.
 
 audit_collector_process_send() ->
@@ -87,4 +88,19 @@ audit_collector_process_named_send() ->
     ?assertMatch(
        [{send,iName,{i_sent_this,Sender}}],
        audit_collector:review(process,[named_send])).
-    
+
+audit_collector_process_named_receive() ->
+    audit_collector:audit(process,[named_receive]),
+    Self = self(),
+    process_flag(trap_exit,true),
+    Receiver = spawn_link(fun() -> register(iName,self()),
+				   Self ! {started,self()},
+				   receive die -> ok end 
+			  end),
+    receive {started,Receiver} -> ok end,
+    Receiver ! die,
+    receive {'EXIT',Receiver,normal} -> ok end,
+    timer:sleep(10),
+    ?assertMatch(
+       [{'receive',iName,die}],
+       audit_collector:review(process,[named_receive])).
