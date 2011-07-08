@@ -24,7 +24,7 @@ start_link() ->
 stop() ->
     gen_server:call(?MODULE,stop).
 
--spec(audit(process,[send|'receive'|start]) -> ok).	     
+-spec(audit(process,[send|'receive'|start|named_start|named_receive]) -> ok).	     
 audit(process,Options) ->
     gen_server:call(?MODULE,{add_tracing_on,{process,Options}}).
 
@@ -47,7 +47,7 @@ handle_call({add_tracing_on,{process,Options}},_,State) ->
     erlang:trace(new,true,Flags), 
     {reply,ok,State};
 handle_call({review,{process,Options}},_,State) ->
-    Reply = make_log(Options,lists:reverse(State#state.log)),    
+    Reply = make_log(Options,lists:reverse(State#state.log)), 
     {reply,Reply,State}.
 
 
@@ -115,11 +115,7 @@ make_log([exit|R],History) ->
 	      Acc
       end,[],History)++make_log(R,History);
 make_log([named_send|R],History) ->
-    Registered = lists:foldl(
-		   fun({trace_ts,P,register,Name,_},Acc) ->
-			   Acc++[{P,Name}];
-		      (_,Acc) -> Acc
-		   end,[],History),
+    Registered = registered(History),
     Sent = make_log([send],History),
     lists:foldl(
       fun({send,P,Msg},Acc) ->
@@ -130,11 +126,7 @@ make_log([named_send|R],History) ->
 	      end
       end,[],Sent)++make_log(R,History);
 make_log([named_receive|R],History) ->
-    Registered = lists:foldl(
-		   fun({trace_ts,P,register,Name,_},Acc) ->
-			   Acc++[{P,Name}];
-		      (_,Acc) -> Acc
-		   end,[],History),
+    Registered = registered(History),
     Received = make_log(['receive'],History),
     lists:foldl(
       fun({'receive',P,Msg},Acc) ->
@@ -144,3 +136,10 @@ make_log([named_receive|R],History) ->
 		  Name -> Acc++[{'receive',Name,Msg}]
 	      end
       end,[],Received)++make_log(R,History).
+
+registered(History) ->
+    lists:foldl(
+      fun({trace_ts,P,register,Name,_},Acc) ->
+	      Acc++[{P,Name}];
+	 (_,Acc) -> Acc
+      end,[],History).
