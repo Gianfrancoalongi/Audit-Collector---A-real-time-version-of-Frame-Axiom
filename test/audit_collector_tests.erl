@@ -12,7 +12,8 @@ audit_collector_test_() ->
       fun audit_collector_process_exited/0,
       fun audit_collector_process_exited_deep/0,
       fun audit_collector_process_named_send/0,
-      fun audit_collector_process_named_receive/0
+      fun audit_collector_process_named_receive/0,
+      fun audit_collector_process_named_started/0
      ]}.
 
 audit_collector_process_send() ->
@@ -104,3 +105,17 @@ audit_collector_process_named_receive() ->
     ?assertMatch(
        [{'receive',iName,die}],
        audit_collector:review(process,[named_receive])).
+
+audit_collector_process_named_started() ->
+    audit_collector:audit(process,[named_start]),
+    Self = self(),
+    Started = spawn(fun() ->
+			    register(iName,self()),
+			    Startee = spawn(lists,reverse,[[1,2,3]]),
+			    Self ! {started,Startee} end),
+    {started,Startee} = receive X -> X end,
+    timer:sleep(10),
+    ?assertMatch(
+       [{started,iName,Startee}],
+       audit_collector:review(process,[named_start])).
+    

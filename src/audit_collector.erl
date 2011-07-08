@@ -74,6 +74,8 @@ options_to_trace_flag([named_send|R]) ->
     [procs,send|options_to_trace_flag(R)];
 options_to_trace_flag([named_receive|R]) ->
     [procs,'receive'|options_to_trace_flag(R)];
+options_to_trace_flag([named_start|R]) ->
+    [procs|options_to_trace_flag(R)];
 options_to_trace_flag([X|R]) -> 
     [X|options_to_trace_flag(R)];
 options_to_trace_flag([]) -> [].
@@ -135,7 +137,19 @@ make_log([named_receive|R],History) ->
 		      Acc;
 		  Name -> Acc++[{'receive',Name,Msg}]
 	      end
-      end,[],Received)++make_log(R,History).
+      end,[],Received)++make_log(R,History);
+make_log([named_start|R],History) ->
+    Registered = registered(History),
+    Started = make_log([start],History),
+    lists:foldl(
+      fun({started,P,P2},Acc) ->
+	      case proplists:get_value(P,Registered) of
+		  undefined ->
+		      Acc;
+		  Name ->
+		      Acc++[{started,Name,P2}]
+	      end
+      end,[],Started)++make_log(R,History).
 
 registered(History) ->
     lists:foldl(
