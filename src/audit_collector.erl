@@ -67,13 +67,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 options_to_trace_flag([start|R]) ->
-    [procs,set_on_spawn|options_to_trace_flag(R)];
+    [procs|options_to_trace_flag(R)];
 options_to_trace_flag([exit|R]) ->
-    [procs,set_on_spawn|options_to_trace_flag(R)];
+    [procs|options_to_trace_flag(R)];
 options_to_trace_flag([named_send|R]) ->
-    [procs,set_on_spawn,send|options_to_trace_flag(R)];
+    [procs,send|options_to_trace_flag(R)];
 options_to_trace_flag([named_receive|R]) ->
-    [procs,set_on_spawn,'receive'|options_to_trace_flag(R)];
+    [procs,'receive'|options_to_trace_flag(R)];
 options_to_trace_flag([X|R]) -> 
     [X|options_to_trace_flag(R)];
 options_to_trace_flag([]) -> [].
