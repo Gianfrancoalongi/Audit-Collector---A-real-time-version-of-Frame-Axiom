@@ -36,8 +36,7 @@ review(process,Options) ->
 %%% gen_server callbacks
 %%%===================================================================
 init([]) ->
-    {ok, #state{log = []
-	       }}.
+    {ok, #state{log = []}}.
 
 handle_call(stop,_, State) ->
     {stop,normal,ok,State};
@@ -147,7 +146,11 @@ make_log([named_start|R],History) ->
 		  undefined ->
 		      Acc;
 		  Name ->
-		      Acc++[{started,Name,P2}]
+		      case proplists:get_value(P2,Registered) of
+			  undefined -> Acc++[{started,Name,P2}];
+			  Name2 ->
+			      Acc++[{started,Name,Name2}]
+		      end
 	      end
       end,[],Started)++make_log(R,History).
 
